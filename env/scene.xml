@@ -1,5 +1,5 @@
 <mujoco model="z1 scene">
-  <include file="../unitree_z1/z1_gripper.xml"/>
+  <include file="../models/unitree_z1/z1_gripper.xml"/>
 
   <statistic center="0 0 0.1" extent="0.6"/>
 

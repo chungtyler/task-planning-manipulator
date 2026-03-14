@@ -1,0 +1,13 @@
+obstacles_data:
+- k_r: 1000
+  p_0: 0.1
+  geometry:
+    type: plane
+    r_0: [0, 0, 0]
+    n: [0, 0, 1]
+  
+# attractors_data:
+#   k_a: 1000
+#   d_bar: 1000
+#   point:
+#     r_0: [0.5, 0.0, 0.5]

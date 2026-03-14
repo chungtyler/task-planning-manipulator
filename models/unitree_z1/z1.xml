@@ -1,5 +1,5 @@
 <mujoco model="z1">
-  <compiler angle="radian" meshdir="../unitree_z1/assets"/>
+  <compiler angle="radian" meshdir="../models/unitree_z1/assets"/>
 
   <option integrator="implicitfast"/>
 
@@ -12,24 +12,6 @@
       </default>
       <default class="collision">
         <geom type="cylinder" group="3" mass="0" density="0"/>
-        <default class="z1_gripper_stator_collision">
-          <geom pos="0.051 0 0" type="mesh"/>
-        </default>
-        <default class="z1_gripper_stator_pad_collision_1">
-          <geom type="box" size="0.014 0.015 0.004" pos="0.186 -0.015 -0.0125"/>
-        </default>
-        <default class="z1_gripper_stator_pad_collision_2">
-          <geom type="box" size="0.014 0.015 0.004" pos="0.186 0.015 -0.0125"/>
-        </default>
-        <default class="z1_gripper_mover_collision">
-          <geom type="mesh"/>
-        </default>
-        <default class="z1_gripper_mover_pad_collision_1">
-          <geom type="box" size="0.014 0.015 0.004" pos="0.086 -0.015 -0.0055"/>
-        </default>
-        <default class="z1_gripper_mover_pad_collision_2">
-          <geom type="box" size="0.014 0.015 0.004" pos="0.086 0.015 -0.0055"/>
-        </default>
       </default>
     </default>
   </default>
@@ -42,19 +24,6 @@
     <mesh file="z1_Link04.stl"/>
     <mesh file="z1_Link05.stl"/>
     <mesh file="z1_Link06.stl"/>
-    <mesh file="z1_GripperStator.stl"/>
-    <mesh file="z1_GripperStator_col_1.stl"/>
-    <mesh file="z1_GripperStator_col_2.stl"/>
-    <mesh file="z1_GripperStator_col_3.stl"/>
-    <mesh file="z1_GripperStator_col_4.stl"/>
-    <mesh file="z1_GripperStator_col_5.stl"/>
-    <mesh file="z1_GripperStator_col_6.stl"/>
-    <mesh file="z1_GripperMover.stl"/>
-    <mesh file="z1_GripperMover_col_1.stl"/>
-    <mesh file="z1_GripperMover_col_2.stl"/>
-    <mesh file="z1_GripperMover_col_3.stl"/>
-    <mesh file="z1_GripperMover_col_4.stl"/>
-    <mesh file="z1_GripperMover_col_5.stl"/>
   </asset>
 
   <worldbody>
@@ -100,28 +69,6 @@
                   <joint name="joint6" axis="1 0 0" range="-2.79253 2.79253"/>
                   <geom class="visual" mesh="z1_Link06"/>
                   <geom size="0.0325 0.0255" pos="0.0255 0 0" quat="1 0 1 0" class="collision"/>
-                  <geom pos="0.051 0 0" type="mesh" mesh="z1_GripperStator" class="visual"/>
-                  <geom class="z1_gripper_stator_collision" mesh="z1_GripperStator_col_1"/>
-                  <geom class="z1_gripper_stator_collision" mesh="z1_GripperStator_col_2"/>
-                  <geom class="z1_gripper_stator_collision" mesh="z1_GripperStator_col_3"/>
-                  <geom class="z1_gripper_stator_collision" mesh="z1_GripperStator_col_4"/>
-                  <geom class="z1_gripper_stator_collision" mesh="z1_GripperStator_col_5"/>
-                  <geom class="z1_gripper_stator_collision" mesh="z1_GripperStator_col_6"/>
-                  <geom class="z1_gripper_stator_pad_collision_1"/>
-                  <geom class="z1_gripper_stator_pad_collision_2"/>
-                  <body name="gripperMover" pos="0.1 0 0">
-                    <inertial pos="0.0132063 0.00476708 0.00380534" quat="0.0631093 0.669067 -0.0615783 0.737953"
-                      mass="0.276213" diaginertia="0.000359044 0.000270888 0.000172378"/>
-                    <joint name="jointGripper" axis="0 1 0" range="-1.51844 0"/>
-                    <geom type="mesh" mesh="z1_GripperMover" class="visual"/>
-                    <geom class="z1_gripper_mover_collision" mesh="z1_GripperMover_col_1"/>
-                    <geom class="z1_gripper_mover_collision" mesh="z1_GripperMover_col_2"/>
-                    <geom class="z1_gripper_mover_collision" mesh="z1_GripperMover_col_3"/>
-                    <geom class="z1_gripper_mover_collision" mesh="z1_GripperMover_col_4"/>
-                    <geom class="z1_gripper_mover_collision" mesh="z1_GripperMover_col_5"/>
-                    <geom class="z1_gripper_mover_pad_collision_1"/>
-                    <geom class="z1_gripper_mover_pad_collision_2"/>
-                  </body>
                 </body>
               </body>
             </body>
@@ -131,6 +78,16 @@
     </body>
   </worldbody>
 
+  <!-- <actuator>
+    <general class="z1" name="motor1" joint="joint1" ctrlrange="-2.61799 2.61799"/>
+    <general class="z1" name="motor2" joint="joint2" ctrlrange="0 2.96706" forcerange="-60 60" gainprm="1500"
+      biasprm="0 -1500 -150"/>
+    <general class="z1" name="motor3" joint="joint3" ctrlrange="-2.87979 0"/>
+    <general class="z1" name="motor4" joint="joint4" ctrlrange="-1.51844 1.51844"/>
+    <general class="z1" name="motor5" joint="joint5" ctrlrange="-1.3439 1.3439"/>
+    <general class="z1" name="motor6" joint="joint6" ctrlrange="-2.79253 2.79253"/>
+  </actuator> -->
+
   <actuator>
     <motor name="motor1" joint="joint1" gear="1"/>
     <motor name="motor2" joint="joint2" gear="1"/>
@@ -138,10 +95,9 @@
     <motor name="motor4" joint="joint4" gear="1"/>
     <motor name="motor5" joint="joint5" gear="1"/>
     <motor name="motor6" joint="joint6" gear="1"/>
-    <motor name="motorGripper" joint="jointGripper"/>
   </actuator>
 
   <keyframe>
-    <key name="home" qpos="0 0.785 -0.261 -0.523 0 0 0" ctrl="0 0.785 -0.261 -0.523 0 0 0"/>
+    <key name="home" qpos="0 0.785 -0.261 -0.523 0 0" ctrl="0 0.785 -0.261 -0.523 0 0"/>
   </keyframe>
 </mujoco>

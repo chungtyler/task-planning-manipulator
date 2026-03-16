@@ -1,74 +1,78 @@
+import pinocchio as pin
 import numpy as np
 
 class Manipulator:
-    def __init__(self, mujoco, m, d, ee_joint_name):
-        self.mujoco = mujoco
-        self.m = m
-        self.d = d
-        self.ee_joint_name = ee_joint_name
-        self.ee_joint_id = m.body(ee_joint_name).id
-
-        self.controller = None
-        self.potential_field = None
-
-    # Calculate the geometric jacobian with respect to the joint COM
-    def compute_ee_jacobian(self):
-        jacobian_p = np.zeros((3, self.m.nv))
-        jacobian_r = np.zeros((3, self.m.nv))
-        self.mujoco.mj_jacBodyCom(self.m, self.d, jacobian_p, jacobian_r, self.ee_joint_id)
-        return jacobian_p, jacobian_r
+    def __init__(self, PATH_TO_ROBOT):
+        self.model = pin.buildModelFromUrdf(PATH_TO_ROBOT)
+        self.data = self.model.createData()
     
-    # Calculate the geometric jacobian with respect to the joint COM
-    def compute_joint_jacobian(self, joint_id):
-        jacobian_p = np.zeros((3, self.m.nv))
-        jacobian_r = np.zeros((3, self.m.nv))
-        self.mujoco.mj_jacBodyCom(self.m, self.d, jacobian_p, jacobian_r, joint_id)
-        return jacobian_p, jacobian_r
+    # Get the pose of the frame in w.r.t world coordinates
+    def get_frame_pose(self, frame_name):
+        frame_id = self.model.getFrameId(frame_name)
+        frame_pose = self.data.oMf[frame_id]
+        return frame_pose
+
+    # Get the twist of the frame w.r.t world coordinates
+    def get_frame_twist(self, frame_name):
+        frame_id = self.model.getFrameId(frame_name)
+        frame_twist = pin.getFrameVelocity(self.model, self.data, frame_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        return frame_twist
     
-    # Get the joint position [x, y, z]
-    def get_ee_position(self):
-        x = self.d.xpos[self.ee_joint_id] # Joint position from forward kinematics
-        return x
+    # Get the joint jacobian
+    def get_joint_jacobian(self, joint_name):
+        joint_id = self.model.getJointId(joint_name)
+        jacobian = pin.getJointJacobian(self.model, self.data, joint_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        return jacobian
     
-    # Get the joint velocity [x_dot, y_dot, z_dot]
-    def get_ee_velocity(self, jacobian_p):
-        x_dot = jacobian_p @ self.d.qvel # Joint velocity from jacobian
-        return x_dot
+    # Get all the joint jacobians and stack
+    def get_joint_jacobians(self):
+        jacobians = []
+        for frame_id in range(self.model.nframes):
+            jacobian = pin.getJointJacobian(self.model, self.data, frame_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+            jacobians.append(jacobian)
+
+        jacobians = np.vstack(jacobians)
+        return jacobians
     
-    # Calculate the inverse kinematics
-    def compute_IK(self, ee_target, alpha=0.2):
-        error = ee_target - self.get_ee_position()
-        jacobian_p, _ = self.compute_jacobian()
-        q_dot = jacobian_p * error
-
-        q_target_pos = self.d.qpos + q_dot * alpha
-        return q_target_pos
+    # Get non linear effects (corilos, centrifugal, gravity) for the joint torques
+    def get_non_linear_effects(self):
+        return self.data.nle
     
-    # Setup controller reference
-    def set_controller(self, controller):
-        self.controller = controller
-
-    # Setup potential field reference
-    def set_potential_field(self, potential_field):
-        self.potential_field = potential_field
+    def get_gravity_effects(self):
+        return self.data.g
     
-    # Compute joint torques based on desired inputs
-    def step(self, input_d):
-        if not self.controller:
-            print("Error no controller is set!")
+    # Get mass matrix
+    def get_mass_matrix(self):
+        return self.data.M
+    
+    # Compute the pose error using the homogenous transformation matrices
+    def compute_pose_error(self, pose_d, frame_name):
+        pose = self.get_frame_pose(frame_name)
 
-        jacobian_ee_p, _ = self.compute_ee_jacobian()
+        # Translation error
+        e_translation = pose_d.translation - pose.translation
 
-        tau_d = self.controller.compute_torque(jacobian_ee_p, input_d)
+        # Orientation error
+        R_relative = pose.rotation.T @ pose_d.rotation
+        e_rotation = pose.rotation @ pin.log3(R_relative)
 
-        F_potential = np.zeros(3)
-        if self.potential_field:
-            q = self.d.qpos
-            F_potential = self.potential_field.compute_F(q)
-            tau_pf = np.zeros_like(q)
-            for joint_id in range(q.shape[0]):
-                jacobian_p, _ = self.compute_joint_jacobian(joint_id)
-                tau_pf += jacobian_p.T @ F_potential[joint_id]
+        # 6D Error vector
+        e = np.concatenate([e_translation, e_rotation])
+        return e
+    
+    # Get error between target and states
+    def get_frame_error(self, pose_d, twist_d, frame_name):
+        twist = self.get_frame_twist(frame_name)
 
-        self.d.ctrl = tau_d + tau_pf
+        # Compute pose error and twist error
+        e = self.compute_pose_error(pose_d, frame_name)
+        e_dot = twist_d - twist.vector
 
+        # Return as 6 DOF error vectors
+        return e, e_dot
+    
+    # Compute the mass matrix, non-linear effects (coriolis, centrifugal, gravity), and jacobians
+    def update(self, q, q_dot):
+        pin.computeAllTerms(self.model, self.data, q, q_dot)
+        pin.computeJointJacobians(self.model, self.data, q)
+        pin.updateFramePlacements(self.model, self.data)

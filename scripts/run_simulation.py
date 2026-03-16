@@ -6,7 +6,8 @@ import time
 
 from src.manipulator import Manipulator
 from src.control import Impedance
-from src.utils import StateLogger, create_marker
+from src.planning import PotentialField
+from src.utils import StateLogger, create_marker, get_yaml_content
 
 # Scene and robot paths
 PATH_TO_SCENE = 'env/scene.xml'
@@ -21,7 +22,7 @@ manipulator = Manipulator(PATH_TO_ROBOT)
 tau_limit = np.full(manipulator.model.nv, 30.0)
 
 # Create controller
-K_d_translation = np.array([1.0, 1.0, 1.0]) * 250
+K_d_translation = np.array([1.0, 1.0, 1.0]) * 300
 K_d_rotation = np.array([1.0, 1.0, 1.0]) * 0
 K_d = np.diag(np.concatenate([K_d_translation, K_d_rotation]))
 D_d = 2 * np.sqrt(K_d)
@@ -40,7 +41,7 @@ state_logger = StateLogger(state_types=['time', 'position', 'force'],
                            units=['s', 'm', 'N'])
 
 # Define simulation time limit
-time_limit = 10
+time_limit = 30
 
 # End effector frame
 frame_name = "joint6"
@@ -50,8 +51,9 @@ def control_loop(q, q_dot):
     # Update pinocchio data object
     manipulator.update(q, q_dot)
 
-    # Compute error terms [translations orientations]
+    # Compute error terms position, velocity
     e, e_dot = manipulator.get_frame_error(pose_d, twist_d, frame_name)
+    print(e)
 
     # Compute control command 6D wrench vector [force, torque]
     jacobian = manipulator.get_joint_jacobian(frame_name)
@@ -65,10 +67,11 @@ def control_loop(q, q_dot):
 
 # Run mujoco simulator
 with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui=False) as viewer:
-    marker = create_marker(viewer, mujoco)
-    viewer.opt.frame = mujoco.mjtFrame.mjFRAME_BODY
-    #site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, frame_name)
-    site_id = model.joint(frame_name).bodyid
+    marker = create_marker(viewer, mujoco) # Show desired position
+    viewer.opt.frame = mujoco.mjtFrame.mjFRAME_BODY # Show frames
+    site_id = model.joint(frame_name).bodyid # End effector body id
+
+    time.sleep(5) # To allow for recording setup
 
     start = time.time()
     while viewer.is_running() and time.time() - start < time_limit:
@@ -80,7 +83,7 @@ with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui
         #####################
 
         mujoco.mj_step(model, data) # Step simulation
-        mujoco.mj_rnePostConstraint(model, data)
+        mujoco.mj_rnePostConstraint(model, data) # Update external force readings
 
         # Log state data
         target_data = {
@@ -108,4 +111,5 @@ with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui
         if time_until_next_step > 0:
             time.sleep(time_until_next_step)
 
+# Show plots
 state_logger.plot()

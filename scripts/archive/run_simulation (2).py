@@ -58,6 +58,12 @@ def control_loop(q, q_dot):
     # Compute error terms [translations orientations]
     e, e_dot = manipulator.get_frame_error(pose_d, twist_d, frame_name)
 
+    # Compute potential field
+    joint_cartesian_positions = np.array([manipulator.data.oMi[joint_id].translation for joint_id in range(1, len(manipulator.model.joints))])
+    F_p = potential_field.compute_F(joint_cartesian_positions)
+    jacobians = manipulator.get_joint_jacobians()
+    tau_p = jacobians.T @ F_p.reshape(-1)
+
     # Compute control command 6D vector [force, torque]
     jacobian = manipulator.get_joint_jacobian(frame_name)
     tau_nle = manipulator.get_non_linear_effects()

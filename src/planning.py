@@ -1,5 +1,4 @@
 import numpy as np
-import ast
 from src.geometry import *
 
 class Obstacle:
@@ -14,9 +13,9 @@ class Obstacle:
 
     # Calculate the repulsion force between joint positions q and geometry
     def compute_F(self, q):
-        F = np.zeros((q.shape[0], 3))
+        F = np.zeros((q.shape[0], 3), dtype=float)
         for i, q_i in enumerate(q):
-            p = self.geometry.get_distance(q_i)
+            p = max(self.geometry.get_distance(q_i), 1e-5)
             if p < self.p_0:
                 grad = self.geometry.get_gradient(q_i)
                 F[i, :] = self.k_r * ((1 / p) - (1 / self.p_0)) * (1 / p ** 2) * grad
@@ -53,6 +52,10 @@ CLASS_LOOKUP = {
 }
 
 class PotentialField:
+    """
+    Compute the total task space (attractor) or joint space (obstacles) for a manipulator
+    Setup using potential_field.yaml file to initialize parameters (attraction/repulsion strength, area of effect, geometry)
+    """
     def __init__(self, objects_data):
         self.objects_data = objects_data
         self.initialize_objects()
@@ -106,7 +109,7 @@ class PotentialField:
 
         self.objects = objects
 
-    # Compute the overall F on the end effector
+    # Compute the F vector (number of joints, [Fx, Fy, Fz]) required to be applied on the joint
     def compute_F(self, q):
         F = np.zeros((q.shape[0], 3))
         for object in self.objects:

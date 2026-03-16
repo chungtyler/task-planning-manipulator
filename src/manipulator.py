@@ -2,6 +2,10 @@ import pinocchio as pin
 import numpy as np
 
 class Manipulator:
+    """
+    Manipulator object to handle pinocchio data computations (e.g. kinematics and dynamics)
+    Based on robot URDF for ease of implementation on simulation or hardware (computation backbone)
+    """
     def __init__(self, PATH_TO_ROBOT):
         self.model = pin.buildModelFromUrdf(PATH_TO_ROBOT)
         self.data = self.model.createData()
@@ -27,9 +31,9 @@ class Manipulator:
     # Get all the joint jacobians and stack
     def get_joint_jacobians(self):
         jacobians = []
-        for frame_id in range(self.model.nframes):
-            jacobian = pin.getJointJacobian(self.model, self.data, frame_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-            jacobians.append(jacobian)
+        for joint_id in range(1, len(self.model.joints)):
+            jacobian = pin.getJointJacobian(self.model, self.data, joint_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+            jacobians.append(jacobian[:3, :])
 
         jacobians = np.vstack(jacobians)
         return jacobians
@@ -38,6 +42,7 @@ class Manipulator:
     def get_non_linear_effects(self):
         return self.data.nle
     
+    # Get gravity torques
     def get_gravity_effects(self):
         return self.data.g
     
@@ -71,8 +76,9 @@ class Manipulator:
         # Return as 6 DOF error vectors
         return e, e_dot
     
-    # Compute the mass matrix, non-linear effects (coriolis, centrifugal, gravity), and jacobians
+    # Compute the forward kinematics, mass matrix, non-linear effects (coriolis, centrifugal, gravity), and jacobians at each time-step
     def update(self, q, q_dot):
+        pin.forwardKinematics(self.model, self.data, q, q_dot)
         pin.computeAllTerms(self.model, self.data, q, q_dot)
         pin.computeJointJacobians(self.model, self.data, q)
         pin.updateFramePlacements(self.model, self.data)

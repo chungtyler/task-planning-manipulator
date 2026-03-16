@@ -1,6 +1,8 @@
 import numpy as np
 
 """
+Used for computing the points on the surface for potential field computation
+
 Parameters:
     r_0: Origin [x_0, y_0, z_0]
     n: Normal [a, b, c]

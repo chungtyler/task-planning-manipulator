@@ -4,6 +4,9 @@ import os
 import yaml
 
 class StateLogger:
+    """
+    Log and display state data results from runtime
+    """
     def __init__(self, state_types=['time', 'position', 'velocity', 'force'], units=['s', 'm', 'm/s', 'N']):
         self.state_types = state_types
         self.units = units
@@ -18,6 +21,7 @@ class StateLogger:
 
     # Plot state data
     def plot(self):
+        # Convert lists to arrays
         state_array = []
         target_array = []
         for state in self.state_types:
@@ -27,6 +31,7 @@ class StateLogger:
             target_data = np.vstack(self.target_history[state])
             target_array.append(target_data)
         
+        # Plot each state type in cartesian coordinates
         labels = ['X', 'Y', 'Z']
         colors = ['red', 'green', 'royalblue']
         plt.rcParams['lines.linewidth'] = 2

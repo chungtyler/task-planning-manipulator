@@ -1,8 +1,9 @@
 # task-planning-manipulator
 Robot Manipulator For Task Planning
 
-
-https://github.com/user-attachments/assets/6308fc75-57ff-4e39-bc3f-8aaed023908c
-<br><br>
 https://youtu.be/z6i7P8Pc98Q
+
+
+
+https://github.com/user-attachments/assets/baeaf634-9c52-4e88-8485-fbb11f3123eb
 

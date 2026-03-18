@@ -49,7 +49,7 @@ class StateLogger:
             plt.grid(True)
             plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.2), ncols=3)
             plt.tight_layout()
-            plt.show()
+        plt.show()
 
 # Generate marker
 def create_marker(viewer, mujoco):

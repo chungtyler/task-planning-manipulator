@@ -97,6 +97,15 @@
     <motor name="motor6" joint="joint6" gear="1"/>
   </actuator>
 
+  <!-- <actuator>
+    <position name="motor1" joint="joint1" kp="200"/>
+    <position name="motor2" joint="joint2" kp="200"/>
+    <position name="motor3" joint="joint3" kp="200"/>
+    <position name="motor4" joint="joint4" kp="200"/>
+    <position name="motor5" joint="joint5" kp="200"/>
+    <position name="motor6" joint="joint6" kp="200"/>
+  </actuator> -->
+
   <keyframe>
     <key name="home" qpos="0 0.785 -0.261 -0.523 0 0" ctrl="0 0.785 -0.261 -0.523 0 0"/>
   </keyframe>

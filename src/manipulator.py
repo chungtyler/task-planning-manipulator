@@ -25,7 +25,7 @@ class Manipulator:
     # Get the joint jacobian
     def get_joint_jacobian(self, joint_name):
         joint_id = self.model.getJointId(joint_name)
-        jacobian = pin.getJointJacobian(self.model, self.data, joint_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
+        jacobian = pin.getJointJacobian(self.model, self.data, joint_id, pin.ReferenceFrame.LOCAL)
         return jacobian
     
     # Get all the joint jacobians and stack
@@ -37,6 +37,17 @@ class Manipulator:
 
         jacobians = np.vstack(jacobians)
         return jacobians
+    
+    def get_IK_step(self, frame_name, pose_d, q):
+        pose = self.get_frame_pose(frame_name)
+        e = pin.log(pose.inverse() * pose_d).vector
+        e[:3] *= 0.5
+        J = self.get_joint_jacobian(frame_name)
+
+        H = J.T @ J + 1e-6 * np.eye(self.model.nv)
+        dq = -np.linalg.solve(H, J.T @ e)
+        new_q = pin.integrate(self.model, q, dq)
+        return new_q
     
     # Get non linear effects (corilos, centrifugal, gravity) for the joint torques
     def get_non_linear_effects(self):

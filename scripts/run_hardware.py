@@ -41,7 +41,7 @@ potential_field = PotentialField(objects_data)
 frame_name = "joint6"
 
 # Control loop logic
-def control_loop(q, q_dot):
+def control_loop(q, q_dot, pose_d, twist_d):
     # Update pinocchio data object
     manipulator.update(q, q_dot)
 
@@ -67,7 +67,7 @@ def control_loop(q, q_dot):
 running = True
 while running:
     try:
-        tau_c = control_loop(arm.q, arm.qd)
+        tau_c = control_loop(arm.q, arm.qd, pose_d, twist_d)
         arm.sendRecv(tau_c)
     except KeyboardInterrupt:
         print("Stop Initiated!")

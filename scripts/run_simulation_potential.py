@@ -6,7 +6,8 @@ import time
 
 from src.manipulator import Manipulator
 from src.control import Impedance
-from src.utils import StateLogger, create_marker
+from src.planning import PotentialField
+from src.utils import StateLogger, create_marker, get_yaml_content
 
 # Scene and robot paths
 PATH_TO_SCENE = 'env/scene.xml'
@@ -21,15 +22,15 @@ manipulator = Manipulator(PATH_TO_ROBOT)
 tau_limit = np.full(manipulator.model.nv, 30.0)
 
 # Create controller
-K_d_translation = np.array([1.0, 1.0, 1.0]) * 300
-K_d_rotation = np.array([1.0, 1.0, 1.0]) * 0
+K_d_translation = np.array([1.0, 1.0, 1.0]) * 30000 # 30000
+K_d_rotation = np.array([1.0, 1.0, 1.0]) * 50
 K_d = np.diag(np.concatenate([K_d_translation, K_d_rotation]))
 D_d = 2 * np.sqrt(K_d)
 controller = Impedance(K_d, D_d)
 
 # Define desired states as pose (4x4 homogenous transformation) and twist (6 DOF vector)
-R_d = np.eye(3)
-p_d = np.array([0.4, 0.0, 0.3])
+R_d = pin.utils.rotate('y', np.pi/2) #np.eye(3)
+p_d = np.array([0.4, 0.2, 0.3])
 
 pose_d = pin.SE3(R_d, p_d)
 twist_d = np.array([0.0, 0.0, 0.0, 
@@ -40,10 +41,31 @@ state_logger = StateLogger(state_types=['time', 'position', 'force'],
                            units=['s', 'm', 'N'])
 
 # Define simulation time limit
-time_limit = 15
+time_limit = 1500
 
 # End effector frame
 frame_name = "joint6"
+
+# # Generate potential field
+# objects_data = get_yaml_content('config/potential_field.yaml')
+# potential_field = PotentialField(objects_data)
+
+def compute_Rd_pointing_down():
+    # Desired tool x-axis in world frame (pointing down)
+    x_d = np.array([0.0, 0.0, -1.0])
+
+    # Reference vector to define yaw (world y-axis)
+    y_ref = np.array([0.0, 1.0, 0.0])
+
+    # Compute orthonormal basis
+    z_d = np.cross(x_d, y_ref)
+    z_d /= np.linalg.norm(z_d)
+
+    y_d = np.cross(z_d, x_d)
+
+    # Assemble rotation matrix (world <- tool)
+    R_d = np.column_stack((x_d, y_d, z_d))
+    return R_d
 
 # Control loop logic
 def control_loop(q, q_dot, pose_d, twist_d):
@@ -54,12 +76,18 @@ def control_loop(q, q_dot, pose_d, twist_d):
     e, e_dot = manipulator.get_frame_error(pose_d, twist_d, frame_name)
     #print(e)
 
+    # # Compute potential field
+    # joint_cartesian_positions = np.array([manipulator.data.oMi[joint_id].translation for joint_id in range(1, len(manipulator.model.joints))])
+    # F_p = potential_field.compute_F(joint_cartesian_positions)
+    # jacobians = manipulator.get_joint_jacobians()
+    # tau_p = jacobians.T @ F_p.reshape(-1)
+
     # Compute control command 6D wrench vector [force, torque]
     jacobian = manipulator.get_joint_jacobian(frame_name)
     tau_nle = manipulator.get_non_linear_effects() # Coriolis + centrifugal + gravity
 
     W_d = controller.compute(e, e_dot)
-    tau_c = jacobian.T @ W_d + tau_nle
+    tau_c = jacobian.T @ W_d + tau_nle #+ tau_p
 
     # Send control command
     return np.clip(tau_c, -tau_limit, tau_limit)
@@ -70,15 +98,23 @@ with mujoco.viewer.launch_passive(model, data, show_left_ui=False, show_right_ui
     viewer.opt.frame = mujoco.mjtFrame.mjFRAME_BODY # Show frames
     site_id = model.joint(frame_name).bodyid # End effector body id
 
-    # time.sleep(5) # To allow for recording setup
+    #time.sleep(5) # To allow for recording setup
 
     start = time.time()
     while viewer.is_running() and time.time() - start < time_limit:
         step_start = time.time()
 
         ### Control Loop ###
-        tau_c = control_loop(data.qpos, data.qvel, pose_d, twist_d)
-        data.ctrl[:] = tau_c
+        t = time.time() - start
+        manipulator.update(data.qpos, data.qvel)
+        # pose_d.rotation = compute_Rd_pointing_down()
+        # pose_d.translation = np.array([0.3, 0.0, 0.1*np.sin(t)+0.2])
+        # pose_d.translation = np.array([0.1*np.cos(t)+0.3, 0.0, 0.1*np.sin(t)+0.2])
+        # pose_d.translation = np.array([0.3, 0.2*np.sin(t), 0.2])
+        # pose_d.translation = np.array([0.1*np.cos(t)+0.3, 0.1*np.sin(t), 0.1*np.sin(t)+0.2])
+        # tau_c = control_loop(data.qpos, data.qvel, pose_d, twist_d)
+        p = manipulator.get_IK_step(frame_name, pose_d, data.qpos)
+        data.ctrl[:] = p
         #####################
 
         mujoco.mj_step(model, data) # Step simulation
